@@ -169,50 +169,50 @@ class PokerHand(object):
         self.cards[len(self.cards) - 1].rank.getRankNumericalValue()
 
 
-# Check for Royal Flush and Straight
-# Prereqs: Cards are Consecutive and there is only one Suit
-# The Highest card is an Ace, it's a Royal Flush
-# The Highest card is not an Ace, it's a Straight Flush
+        # Check for Royal Flush and Straight
+        # Prereqs: Cards are Consecutive and there is only one Suit
+        # The Highest card is an Ace, it's a Royal Flush
+        # The Highest card is not an Ace, it's a Straight Flush
         if (diffRanks == 4 and numSuits == 1):
             if (self.cards[0].rank == Rank.ACE):
                 return PokerHandCategories.ROYAL_FLUSH
             else:
                 return PokerHandCategories.STRAIGHT_FLUSH
 
-# Check for 4 of a Kind or Full House,
-# Prereqs: There are 2 Ranks.
-# The count of a rank is in [4, 1] it's a Four of a kind
-# The count of a rank is in [2, 3], it's a Full House
+        # Check for 4 of a Kind or Full House,
+        # Prereqs: There are 2 Ranks.
+        # The count of a rank is in [4, 1] it's a Four of a kind
+        # The count of a rank is in [2, 3], it's a Full House
         if (numRanks == 2):
             if (rankCounts[0] == 4):
                 return PokerHandCategories.FOUR_OF_A_KIND
             else
                 return PokerHandCategories.FULL_HOUSE
 
-# Check for a Straight or Flush
-# Prereqs: There are 5 Ranks
-# If there is one Suit, it's a Flush
-# If the cards are consecutive, it's a Straight
+        # Check for a Straight or Flush
+        # Prereqs: There are 5 Ranks
+        # If there is one Suit, it's a Flush
+        # If the cards are consecutive, it's a Straight
         if (numRanks == 5):
             if (numSuits == 1):
                 return PokerHandCategories.FLUSH
             elif (diffRanks == 4):
                 return PokerHandCategories.STRAIGHT
 
-# Check for 3 of A Kind or Two Pair
-# Prereqs: There are 3 Ranks
-# Counts are [3, 1, 1] it's a 3Kind
-# Counts are [2, 2, 1] it's a 2Pair
+        # Check for 3 of A Kind or Two Pair
+        # Prereqs: There are 3 Ranks
+        # Counts are [3, 1, 1] it's a 3Kind
+        # Counts are [2, 2, 1] it's a 2Pair
         if (numRanks == 3):
             if (rankCounts[0] == 3):
                 return PokerHandCategories.THREE_OF_A_KIND
             else:
                 return PokerHandCategories.TWO_PAIR
 
-# Check for One Pair or High Card
-# Prereqs: There are more than 3 ranks, and it is not a Straight
-# If there are 4 ranks, it's One Pair
-# If there are 5 ranks, it's High Card
+        # Check for One Pair or High Card
+        # Prereqs: There are more than 3 ranks, and it is not a Straight
+        # If there are 4 ranks, it's One Pair
+        # If there are 5 ranks, it's High Card
         if (numRanks == 4):
             return PokerHandCategories.ONE_PAIR
 
