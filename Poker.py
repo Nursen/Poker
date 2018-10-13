@@ -1,6 +1,7 @@
 from enum import Enum, unique
 from functools import total_ordering
 from random import shuffle
+from collections import defaultdict
 
 @unique
 class Suit(Enum):
@@ -42,12 +43,12 @@ class Rank(Enum):
         return str(self.value)
 
     def __eq__(self, other):
-        return self.getRankValue(self.value) == self.getRankValue(other.value)
+        return self.getRankNumericalValue() == other.getRankNumericalValue()
 
     def __lt__(self, other):
-        return self.getRankValue(self.value) < self.getRankValue(other.value)
+        return self.getRankNumericalValue() < other.getRankNumericalValue()
 
-    def getRankValue(self, value):
+    def getRankNumericalValue(self):
         faceRankValues = {
             'J' : 11,
             'Q' : 12,
@@ -56,11 +57,11 @@ class Rank(Enum):
         }
 
         try:
-            trueValue = int(value)
+            intValue = int(self.value)
         except ValueError:
-            trueValue = faceRankValues[value]
+            intValue = faceRankValues[self.value]
 
-        return trueValue
+        return intValue
 
 @total_ordering
 class Card (object):
@@ -78,11 +79,10 @@ class Card (object):
         else:
             raise TypeError
 
-    def initializeFromString(self, card):
+    def initFromString(self, card):
         """ Initalize a card object from a string representation of the rankfollowed by the suit (Ex: 4H = 4 of Hearts)
-        The suit is given by the first letter of the suit name. E.g Hearts: H, Clubs: C. 
-        Ranks for non-numeric cards are
-        given by the first letter of the rank. E.g. Queen: Q, Ace: A 
+        The suit is given by the first letter of the suit name. E.g Hearts: H, Clubs: C.
+        Ranks for non-numeric cards are given by the first letter of the rank. E.g. Queen: Q, Ace: A
         Raises a ValueError if invalid Suit or Rank is supplied."""
 
         suitStr = card[-1]
@@ -131,6 +131,132 @@ class PokerHandCategory(Enum):
 
     def __str__(self):
         return str.lower(self.name.replace('_',' '))
+
+@total_ordering
+class PokerHand(object):
+    def __init__(self, cards):
+        if (cards == None or len(cards) < 5):
+            raise TypeError('Must have at least 5 cards to make a Poker Hand')
+        if (len(cards) == 5):
+            self.cards = cards
+            self.cards.sort(reverse=True)
+            self.category = self.determineCategory()
+            self.categoryRank = self.determineCategoryRank()
+            self.kicker = self.determineKicker()
+        else:
+            self.cards = self.bestHand(cards)
+            self.cards.sort(reverse = True)
+            self.category = self.determineCategory()
+            self.categoryRank = self.determineCategoryRank()
+            self.kicker = self.determineKicker()
+
+    def determineCategory(self):
+        cardsByRank = defaultdict(list)
+        cardsBySuit = defaultdict(list)
+
+        for c in self.cards:
+            cardsByRank[c.rank].append(c)
+            cardsBySuit[c.suit].append(c)
+
+        numRanks = len(cardsByRank.keys())
+        numSuits = len(cardsBySuit.keys())
+
+        rankCounts = list(map(lambda x: len(cardsByRank[x]),
+            cardsByRank.keys()))
+        rankCounts.sort(reverse=True)
+
+        diffRanks = self.cards[0].rank.getRankNumericalValue() -
+        self.cards[len(self.cards) - 1].rank.getRankNumericalValue()
+
+
+# Check for Royal Flush and Straight
+# Prereqs: Cards are Consecutive and there is only one Suit
+# The Highest card is an Ace, it's a Royal Flush
+# The Highest card is not an Ace, it's a Straight Flush
+        if (diffRanks == 4 and numSuits == 1):
+            if (self.cards[0].rank == Rank.ACE):
+                return PokerHandCategories.ROYAL_FLUSH
+            else:
+                return PokerHandCategories.STRAIGHT_FLUSH
+
+# Check for 4 of a Kind or Full House,
+# Prereqs: There are 2 Ranks.
+# The count of a rank is in [4, 1] it's a Four of a kind
+# The count of a rank is in [2, 3], it's a Full House
+        if (numRanks == 2):
+            if (rankCounts[0] == 4):
+                return PokerHandCategories.FOUR_OF_A_KIND
+            else
+                return PokerHandCategories.FULL_HOUSE
+
+# Check for a Straight or Flush
+# Prereqs: There are 5 Ranks
+# If there is one Suit, it's a Flush
+# If the cards are consecutive, it's a Straight
+        if (numRanks == 5):
+            if (numSuits == 1):
+                return PokerHandCategories.FLUSH
+            elif (diffRanks == 4):
+                return PokerHandCategories.STRAIGHT
+
+# Check for 3 of A Kind or Two Pair
+# Prereqs: There are 3 Ranks
+# Counts are [3, 1, 1] it's a 3Kind
+# Counts are [2, 2, 1] it's a 2Pair
+        if (numRanks == 3):
+            if (rankCounts[0] == 3):
+                return PokerHandCategories.THREE_OF_A_KIND
+            else:
+                return PokerHandCategories.TWO_PAIR
+
+# Check for One Pair or High Card
+# Prereqs: There are more than 3 ranks, and it is not a Straight
+# If there are 4 ranks, it's One Pair
+# If there are 5 ranks, it's High Card
+        if (numRanks == 4):
+            return PokerHandCategories.ONE_PAIR
+
+        return PokerHandCategories.HIGH_CARD
+
+    def determineCategoryRank(self):
+        raise NotImplementedError
+    def determineKicker(self):
+        raise NotImplementedError
+
+    def __eq__(self, other):
+        return (
+                self.category == other.category and
+                self.categoryRank == other.categoryRank and
+                self.kicker == other.kicker
+                )
+
+    def __lt__(self, other):
+        # Compare categories first
+        if (self.category != other.category):
+            return self.category < other.category
+        # If categories are the same, compare the category highest rank
+        if (self.categoryRank != other.categoryRank):
+            return self.categoryRank < other.categoryRank
+        # If the category highest ranks are the same, compare the first nonidentical kicker element
+        if (self.kicker != other.kicker):
+            for i in range(len(self.kicker)):
+                if self.kicker[i] != other.kicker[i]:
+                    return self.kicker[i] < other.kicker[i]
+        # If the category and kicker are equal, the hands are equal, not less
+        # than. Return false.
+        return False
+
+    def __str__(self):
+        if (self.kicker == None):
+            kickerString = 'N/A'
+        else:
+            kickerString = str.join(' ', list(map(lambda x: str(x),
+                self.kicker)))
+
+        cardString = str.join(' ', list(map(lambda x: str(x), self.cards)))
+
+        return f'{self.category} ( {self.categoryRank} ) | kicker:{kickerString} | cards: {cardString}'
+
 
 class Deck(object):
     """ A deck of cards supporting pulling cards from the top of the deck and
