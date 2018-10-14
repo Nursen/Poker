@@ -13,10 +13,10 @@ class Suit(Enum):
 
     def __str__(self):
         switcher = {
-                'H' : u'\u2665',
-                'C' : u'\u2663',
-                'D' : u'\u2666',
-                'S' : u'\u2660'
+                'H' : u'\U00002665',
+                'C' : u'\U00002663',
+                'D' : u'\U00002666',
+                'S' : u'\U00002660'
         }
         return switcher[self.value]
 
@@ -121,20 +121,20 @@ class PokerHandCategory(Enum):
     ROYAL_FLUSH = 10
 
     def __lt__(self,other):
-        return self.other < other.value
+        return self.value < other.value
 
     def __str__(self):
         images = {
-              'HIGH_CARD' : u'\uf460',
-              'ONE_PAIR' : u'\uf350',
-              'TWO_PAIR' : u'\uf350\uf350',
-              'THREE_OF_A_KIND' : u'\u2618',
-              'STRAIGHT' : u'\uf4cf',
-              'FLUSH' : u'\uf6bd',
-              'FULL_HOUSE' : u'\uf3e0',
-              'FOUR_OF_A_KIND' : u'\uf340',
-              'STRAIGHT_FLUSH' : u'\uf4cf\uf6bd',
-              'ROYAL_FLUSH' : u'\uf451\uf6bd'
+              'HIGH_CARD' : u'\U0001f460',
+              'ONE_PAIR' : u'\U0001f350',
+              'TWO_PAIR' : u'\U0001f350\U0001f350',
+              'THREE_OF_A_KIND' : u'\U00002618',
+              'STRAIGHT' : u'\U0001f4cf',
+              'FLUSH' : u'\U0001f6bd',
+              'FULL_HOUSE' : u'\U0001f3e0',
+              'FOUR_OF_A_KIND' : u'\U0001f340',
+              'STRAIGHT_FLUSH' : u'\U0001f4cf\U0001f6bd',
+              'ROYAL_FLUSH' : u'\U0001f451\U0001f6bd'
         }
 
         return images[self.name] + ' ' + self.name[0] + str.lower(self.name[1:].replace('_',' '))
@@ -188,7 +188,7 @@ class PokerHand(object):
         # ranks
 
         if (mostCardsInASuit >=5 and numRanks >=5):
-            potentialSuits = [n for n in cardsInSuit.keys() if cardsPerSuit[n] >= 5]
+            potentialSuits = [n for n in cardsInSuit.keys() if cardsInSuit[n] >= 5]
             potentialHands = [self.getHighestConsecutiveHand(cardsBySuit[s]) for
                     s in potentialSuits if
                     self.getHighestConsecutiveHand(cardsBySuit[s]) is not None]
@@ -226,9 +226,9 @@ class PokerHand(object):
         # Check to see if prereqs for Flush are met.
         # Requires 5 cards of one Suit.
         if (mostCardsInASuit >= 5):
-            potentialSuits = [s for s in cardsInSuit.keys() if cardsPerSuit[s]
+            potentialSuits = [s for s in cardsInSuit.keys() if cardsInSuit[s]
                     >= 5]
-            potentialHands = [getBestNCards(cardsBySuit[s], 5) for s in
+            potentialHands = [self.getBestNCards(cardsBySuit[s], 5) for s in
                     potentialSuits]
             return max(potentialHands)
 

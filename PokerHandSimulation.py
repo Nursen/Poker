@@ -14,15 +14,17 @@ from Poker import *
 deck = Deck()
 handsPrinted = 0
 minRank = 1
-while handsPrinted < 100:
+cardsToDraw = 20
+handsToGenerate = 250
+while handsPrinted < handsToGenerate:
     try:
-        pokerHand = PokerHand(deck.takeCards(5))
+        pokerHand = PokerHand(deck.takeCards(cardsToDraw))
         if(pokerHand.category.value >= minRank):
             print(pokerHand)
             handsPrinted +=1
     except ValueError:
         deck = Deck()
-        pokerHand = PokerHand(deck.takeCards(5))
+        pokerHand = PokerHand(deck.takeCards(cardsToDraw))
         if(pokerHand.category.value >= minRank):
             print(pokerHand)
             handsPrinted +=1
