@@ -42,9 +42,6 @@ class Rank(Enum):
     def __str__(self):
         return str(self.value)
 
-    def __eq__(self, other):
-        return self.getRankNumericalValue() == other.getRankNumericalValue()
-
     def __lt__(self, other):
         return self.getRankNumericalValue() < other.getRankNumericalValue()
 
@@ -112,16 +109,16 @@ class Card (object):
 @total_ordering
 @unique
 class PokerHandCategory(Enum):
-    HIGH_CARD : 1
-    ONE_PAIR : 2
-    TWO_PAIR: 3
-    THREE_OF_A_KIND: 4
-    STRAIGHT: 5
-    FLUSH: 6
-    FULL_HOUSE: 7
-    FOUR_OF_A_KIND: 8
-    STRAIGHT_FLUSH: 9
-    ROYAL_FLUSH: 10
+    HIGH_CARD = 1
+    ONE_PAIR = 2
+    TWO_PAIR = 3
+    THREE_OF_A_KIND = 4
+    STRAIGHT = 5
+    FLUSH = 6
+    FULL_HOUSE = 7
+    FOUR_OF_A_KIND = 8
+    STRAIGHT_FLUSH = 9
+    ROYAL_FLUSH = 10
 
     def __eq__(self, other):
         return self.value == other.value
@@ -164,9 +161,8 @@ class PokerHand(object):
         rankCounts = list(map(lambda x: len(cardsByRank[x]),
             cardsByRank.keys()))
         rankCounts.sort(reverse=True)
-
-        diffRanks = self.cards[0].rank.getRankNumericalValue() -
-        self.cards[len(self.cards) - 1].rank.getRankNumericalValue()
+        #TODO change diffRanks to isConsecutive
+        diffRanks = self.cards[0].rank.getRankNumericalValue() - self.cards[len(self.cards) - 1].rank.getRankNumericalValue()
 
 
         # Check for Royal Flush and Straight
@@ -175,9 +171,9 @@ class PokerHand(object):
         # The Highest card is not an Ace, it's a Straight Flush
         if (diffRanks == 4 and numSuits == 1):
             if (self.cards[0].rank == Rank.ACE):
-                return PokerHandCategories.ROYAL_FLUSH
+                return PokerHandCategory.ROYAL_FLUSH
             else:
-                return PokerHandCategories.STRAIGHT_FLUSH
+                return PokerHandCategory.STRAIGHT_FLUSH
 
         # Check for 4 of a Kind or Full House,
         # Prereqs: There are 2 Ranks.
@@ -185,9 +181,9 @@ class PokerHand(object):
         # The count of a rank is in [2, 3], it's a Full House
         if (numRanks == 2):
             if (rankCounts[0] == 4):
-                return PokerHandCategories.FOUR_OF_A_KIND
-            else
-                return PokerHandCategories.FULL_HOUSE
+                return PokerHandCategory.FOUR_OF_A_KIND
+            else:
+                return PokerHandCategory.FULL_HOUSE
 
         # Check for a Straight or Flush
         # Prereqs: There are 5 Ranks
@@ -195,9 +191,9 @@ class PokerHand(object):
         # If the cards are consecutive, it's a Straight
         if (numRanks == 5):
             if (numSuits == 1):
-                return PokerHandCategories.FLUSH
+                return PokerHandCategory.FLUSH
             elif (diffRanks == 4):
-                return PokerHandCategories.STRAIGHT
+                return PokerHandCategory.STRAIGHT
 
         # Check for 3 of A Kind or Two Pair
         # Prereqs: There are 3 Ranks
@@ -205,23 +201,98 @@ class PokerHand(object):
         # Counts are [2, 2, 1] it's a 2Pair
         if (numRanks == 3):
             if (rankCounts[0] == 3):
-                return PokerHandCategories.THREE_OF_A_KIND
+                return PokerHandCategory.THREE_OF_A_KIND
             else:
-                return PokerHandCategories.TWO_PAIR
+                return PokerHandCategory.TWO_PAIR
 
         # Check for One Pair or High Card
         # Prereqs: There are more than 3 ranks, and it is not a Straight
         # If there are 4 ranks, it's One Pair
         # If there are 5 ranks, it's High Card
         if (numRanks == 4):
-            return PokerHandCategories.ONE_PAIR
+            return PokerHandCategory.ONE_PAIR
 
-        return PokerHandCategories.HIGH_CARD
+        return PokerHandCategory.HIGH_CARD
 
     def determineCategoryRank(self):
-        raise NotImplementedError
+        highCardCategories = [
+                PokerHandCategory.ROYAL_FLUSH,
+                PokerHandCategory.STRAIGHT_FLUSH,
+                PokerHandCategory.FLUSH,
+                PokerHandCategory.STRAIGHT,
+                PokerHandCategory.HIGH_CARD
+                ]
+
+        rankMostRepeatedCategories = [
+                PokerHandCategory.FOUR_OF_A_KIND,
+                PokerHandCategory.FULL_HOUSE,
+                PokerHandCategory.THREE_OF_A_KIND,
+                PokerHandCategory.ONE_PAIR
+                ]
+
+        # For all of these categories, the category rank is determined by the highest card, which is the first card since self.cards is sorted
+        if (self.category in highCardCategories):
+            return self.cards[0].rank
+
+        cardsInRank = defaultdict(int)
+        for c in self.cards:
+            cardsInRank[c.rank] += 1
+        # For all of these categories, the category rank is determined by the rank with the most cards in the hand, which is unique.
+        if (self.category in rankMostRepeatedCategories):
+            return max(cardsInRank, key=cardsInRank.get)
+
+        # The only remaining Category is Two of a Kind, where the category rank is determined by the higher rank between the two pairs
+        return max(
+                list(
+                    filter(
+                        lambda x: cardsInRank.get(x) == 2,
+                        cardsInRank.keys()
+                        )
+                    )
+                )
+
     def determineKicker(self):
-        raise NotImplementedError
+        highCardCategories = [
+                PokerHandCategory.ROYAL_FLUSH,
+                PokerHandCategory.STRAIGHT_FLUSH,
+                PokerHandCategory.FLUSH,
+                PokerHandCategory.STRAIGHT,
+                PokerHandCategory.HIGH_CARD
+                ]
+
+        # For all hands in this category, the kicker is the sorted hand without
+        # the high card.
+        if (self.category in highCardCategories):
+            return list(map(lambda c: c.rank, self.cards[1:]))
+
+        rankMostRepeatedCategories = [
+                PokerHandCategory.FOUR_OF_A_KIND,
+                PokerHandCategory.THREE_OF_A_KIND,
+                PokerHandCategory.ONE_PAIR
+                ]
+
+        cardsInRank = defaultdict(int)
+        for c in self.cards:
+            cardsInRank[c.rank] += 1
+        # For all hands in this category, the kicker is the sorted cards remaining
+        # after all cards of the rank with the highest number of cards have been
+        # removed.
+        if (self.category in rankMostRepeatedCategories):
+            kickerRanks = [c.rank for c in self.cards if c.rank !=
+                    self.categoryRank]
+            kickerRanks.sort(reverse=True)
+            return kickerRanks
+        # For the remaining hand categories, the tie-breaker is the rank with
+        # the second-most cards. for 2Pair the rank will have 1 card, for Full
+        # House the rank will have 2 cards.
+        kickerCardCount = {
+                PokerHandCategory.TWO_PAIR : 1,
+                PokerHandCategory.FULL_HOUSE : 2
+                }
+
+        return list(filter(
+            lambda x: cardsInRank[x] == kickerCardCount[self.category],
+            cardsInRank.keys()))
 
     def __eq__(self, other):
         return (
@@ -247,13 +318,12 @@ class PokerHand(object):
         return False
 
     def __str__(self):
-        if (self.kicker == None):
+        if (self.kicker is None):
             kickerString = 'N/A'
         else:
-            kickerString = str.join(' ', list(map(lambda x: str(x),
-                self.kicker)))
+            kickerString = str.join(' ', [str(k) for k in self.kicker])
 
-        cardString = str.join(' ', list(map(lambda x: str(x), self.cards)))
+        cardString = str.join(' ', [str(c) for c in self.cards])
 
         return f'{self.category} ( {self.categoryRank} ) | kicker:{kickerString} | cards: {cardString}'
 
@@ -268,11 +338,13 @@ class Deck(object):
     def __init__ (self, cards = None):
         if (cards == None):
             self.cards = self.getStandardSortedDeck()
-            #extra shuffling for fun and nostalgia
-            for i in range(self.standardShuffleAttempts):
-                shuffle(self.cards)
+            self.shuffle()
         else:
             self.cards = cards
+
+    def shuffle(self):
+        for i in range(self.standardShuffleAttempts):
+            shuffle(self.cards)
 
     def takeCards(self, numCards=1):
         """Returns the top card in the deck and removes it from the Deck"""
@@ -292,5 +364,12 @@ class Deck(object):
                 cards.append(Card(r,s))
         return cards
 
-
+    def __str__(self):
+        maxPerLine = len(self.cards) // 5
+        return str.join('\n',
+                [str.join(' ',
+                    [str(c) for c in self.cards][i:i+maxPerLine]
+                 ) for i in
+                range(0, len(self.cards), maxPerLine)]
+                )
 
