@@ -120,14 +120,24 @@ class PokerHandCategory(Enum):
     STRAIGHT_FLUSH = 9
     ROYAL_FLUSH = 10
 
-    def __eq__(self, other):
-        return self.value == other.value
-
     def __lt__(self,other):
         return self.other < other.value
 
     def __str__(self):
-        return str.lower(self.name.replace('_',' '))
+        images = {
+              'HIGH_CARD' : u'\uf460',
+              'ONE_PAIR' : u'\uf350',
+              'TWO_PAIR' : u'\uf350\uf350',
+              'THREE_OF_A_KIND' : u'\u2618',
+              'STRAIGHT' : u'\uf4cf',
+              'FLUSH' : u'\uf6bd',
+              'FULL_HOUSE' : u'\uf3e0',
+              'FOUR_OF_A_KIND' : u'\uf340',
+              'STRAIGHT_FLUSH' : u'\uf4cf\uf6bd',
+              'ROYAL_FLUSH' : u'\uf451\uf6bd'
+        }
+
+        return images[self.name] + ' ' + self.name[0] + str.lower(self.name[1:].replace('_',' '))
 
 @total_ordering
 class PokerHand(object):
@@ -146,6 +156,154 @@ class PokerHand(object):
             self.category = self.determineCategory()
             self.categoryRank = self.determineCategoryRank()
             self.kicker = self.determineKicker()
+
+    def score(self):
+        """ score function to give an integer value to a hand, useful for
+        identifying ties/ equivalent hands """
+        return (self.category.value * 10**4 +
+                self.categoryRank.getRankNumericalValue() * 10**2 +
+                sum([r.getRankNumericalValue() for r in self.kicker])
+                )
+
+    def bestHand(self, cards):
+        """ Given a list of 5 or more unique cards, returns an array of the 5 cards that
+        will result in the highest ranking Poker Hand."""
+
+        cardsByRank = defaultdict(list)
+        cardsBySuit = defaultdict(list)
+
+        for c in cards:
+            cardsByRank[c.rank].append(c)
+            cardsBySuit[c.suit].append(c)
+
+        cardsInRank = { k : len(cardsByRank[k]) for k in cardsByRank.keys() }
+        cardsInSuit = { k : len(cardsBySuit[k]) for k in cardsBySuit.keys() }
+
+        mostCardsInASuit = max(cardsInSuit.values())
+        mostCardsInARank = max(cardsInRank.values())
+        numRanks = len(cardsByRank.keys())
+
+        #Check to see if prereqs for Royal Flush or Straight Flush are met.
+        # Requires 5 consecutive cards of one suit, thus requiring 5 different
+        # ranks
+
+        if (mostCardsInASuit >=5 and numRanks >=5):
+            potentialSuits = [n for n in cardsInSuit.keys() if cardsPerSuit[n] >= 5]
+            potentialHands = [self.getHighestConsecutiveHand(cardsBySuit[s]) for
+                    s in potentialSuits if
+                    self.getHighestConsecutiveHand(cardsBySuit[s]) is not None]
+            if any(potentialHands):
+                return max(potentialHands)
+
+        def assembleHandWithNOfRank(n):
+            hand = []
+            potentialRanks = [r for r in cardsInRank.keys() if cardsInRank[r] >= n ]
+            hand.extend(cardsByRank[max(potentialRanks)][:n])
+            hand.extend(self.getBestNCards([c for c in cards if c not in
+                hand],5-n))
+            return hand;
+        # Check to see if prereqs for 4 of a kind are met.
+        # Requires 4 cards of the same rank
+
+        if mostCardsInARank >=4:
+            return assembleHandWithNOfRank(4);
+        #Check to see if prereqs for Full House are met.
+        # Requires at least one rank with 3+ cards and at least 2 ranks with 2+
+        # cards.
+        if (mostCardsInARank >= 3 and len ([ v for v in cardsInRank.values() if v
+            >=2]) >=2):
+            hand = []
+            potentialRanksFor3 = [ r for r in cardsInRank.keys() if cardsInRank[r] >= 3]
+            rankOf3 = max(potentialRanksFor3)
+            hand.extend(cardsByRank[rankOf3][:3])
+            potentialRanksFor2 = [r for r in cardsInRank.keys() if cardsInRank[r] >= 2 and r != rankOf3]
+            rankOf2 = max(potentialRanksFor2)
+            hand.extend(cardsByRank[rankOf2][:2])
+            return hand
+
+
+
+        # Check to see if prereqs for Flush are met.
+        # Requires 5 cards of one Suit.
+        if (mostCardsInASuit >= 5):
+            potentialSuits = [s for s in cardsInSuit.keys() if cardsPerSuit[s]
+                    >= 5]
+            potentialHands = [getBestNCards(cardsBySuit[s], 5) for s in
+                    potentialSuits]
+            return max(potentialHands)
+
+        # Check to see if prereqs for Straight are met.
+        # Requires 5 cards of consecutive Rank, thus requiring 5 different
+        # ranks.
+
+        if (numRanks >= 5):
+            hand  = self.getHighestConsecutiveHand(cards)
+            if hand is not None:
+                return hand
+
+        # Check to see if prereqs for 3 of a Kind are met.
+        # Requires a rank with 3 cards
+
+        if (mostCardsInARank >=3):
+            return assembleHandWithNOfRank(3)
+
+        # Check to see if prereqs for 2 Pair are met
+        # Requires 2 ranks with 2 cards
+
+        if (mostCardsInARank >= 2 and len([n for n in cardsInRank.values() if
+            n >= 2]) >= 2):
+            potentialRanks = [r for r in cardsInRank.keys() if cardsInRank[r] >=
+                    2]
+            firstRank = max(potentialRanks)
+            secondRank = max([r for r in potentialRanks if r != firstRank])
+            hand = cardsByRank[firstRank][:2]
+            hand.extend(cardsByRank[secondRank][:2])
+            hand.extend(self.getBestNCards([c for c in cards if c not in
+                hand],1))
+            return hand
+
+        # Only a one pair or a high card can be returned, which one is
+        # determined by the max cards per rank.
+
+        return assembleHandWithNOfRank(mostCardsInARank)
+
+    def getBestNCards(self, cards, n):
+        if len(cards) < n:
+            raise ValueError(f'Must have at least {n} cards to choose {n} best cards.')
+        cards.sort(reverse=True)
+        return cards[:n]
+
+    def getHighestConsecutiveHand(self, cards):
+        """ Given a list of cards, returns the highest ranking set of 5 cards in
+        descending order, or None if no set of 5 consecutive cards exists."""
+        if (len(cards) < 5):
+            return None
+        cards.sort(reverse=True)
+        hand = [cards[0]]
+        cardsToCollect = 4
+
+        for i in range(1,len(cards)):
+            if cardsToCollect == 0:
+                return hand
+            if(cards[i].rank.getRankNumericalValue() ==
+                    hand[-1].rank.getRankNumericalValue() - 1):
+                hand.append(cards[i])
+                cardsToCollect -= 1
+            elif cards[i].rank == hand[-1].rank:
+                pass
+            else:
+                hand = [cards[i]]
+                cardsToCollect = 4
+
+        if len(hand) == 5:
+            return hand
+
+        return None
+
+
+
+
+
 
     def determineCategory(self):
         cardsByRank = defaultdict(list)
@@ -262,37 +420,35 @@ class PokerHand(object):
 
         # For all hands in this category, the kicker is the sorted hand without
         # the high card.
+
         if (self.category in highCardCategories):
             return list(map(lambda c: c.rank, self.cards[1:]))
 
         rankMostRepeatedCategories = [
                 PokerHandCategory.FOUR_OF_A_KIND,
                 PokerHandCategory.THREE_OF_A_KIND,
-                PokerHandCategory.ONE_PAIR
+                PokerHandCategory.ONE_PAIR,
+                PokerHandCategory.FULL_HOUSE
                 ]
+        # For all hands in this category, the kicker is the sorted cards
+        # remaining after all cards of the category rank have been removed.
 
-        cardsInRank = defaultdict(int)
-        for c in self.cards:
-            cardsInRank[c.rank] += 1
-        # For all hands in this category, the kicker is the sorted cards remaining
-        # after all cards of the rank with the highest number of cards have been
-        # removed.
         if (self.category in rankMostRepeatedCategories):
             kickerRanks = [c.rank for c in self.cards if c.rank !=
                     self.categoryRank]
             kickerRanks.sort(reverse=True)
             return kickerRanks
-        # For the remaining hand categories, the tie-breaker is the rank with
-        # the second-most cards. for 2Pair the rank will have 1 card, for Full
-        # House the rank will have 2 cards.
-        kickerCardCount = {
-                PokerHandCategory.TWO_PAIR : 1,
-                PokerHandCategory.FULL_HOUSE : 2
-                }
 
-        return list(filter(
-            lambda x: cardsInRank[x] == kickerCardCount[self.category],
-            cardsInRank.keys()))
+        # Two pairs is the only  remaining hand category. The kicker is the
+        # lower ranking pair, followed by the remaining 1 unpaired card's rank.
+
+        cardsInRank = defaultdict(int)
+        for c in self.cards:
+            cardsInRank[c.rank] += 1
+
+        kickerRanks = [min([ k for k in cardsInRank.keys() if cardsInRank[k] == 2]),
+                [k for k in cardsInRank.keys() if cardsInRank[k] == 1][0]]
+        return kickerRanks
 
     def __eq__(self, other):
         return (
@@ -325,7 +481,7 @@ class PokerHand(object):
 
         cardString = str.join(' ', [str(c) for c in self.cards])
 
-        return f'{self.category} ( {self.categoryRank} ) | kicker:{kickerString} | cards: {cardString}'
+        return f'{self.category} ( {self.categoryRank} ) | kicker: {kickerString} | cards: {cardString}'
 
 
 class Deck(object):
@@ -343,7 +499,7 @@ class Deck(object):
             self.cards = cards
 
     def shuffle(self):
-        for i in range(self.standardShuffleAttempts):
+        for _ in range(self.standardShuffleAttempts):
             shuffle(self.cards)
 
     def takeCards(self, numCards=1):
