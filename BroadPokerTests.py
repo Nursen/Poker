@@ -28,4 +28,22 @@ def whichCardsShouldIChoose(cards):
     hand = PokerHand([Card(c) for c in cards])
     return [str(c.rank.value) + str(c.suit.value) for c in hand.cards]
 
+def createSampleHands(N,C):
+    """ returns a list of N lists of string representations of C cards drawn
+    randomly from a deck. C must be less than or equal to 52, as that is the number of cards in a deck. """
+    if (C > 52):
+        raise ValueError("Number of cards must be less than or equal to 52")
+    deck = Deck()
+    handsInDeck = 0
+    hands = []
+    while handsInDeck < N:
+        try:
+            hands.append(cardListString(deck.takeCards(C)))
+            handsInDeck += 1
+        except ValueError:
+            deck = Deck()
+    return hands
+
+def cardListString(cards):
+    return [str(c.rank.value) + str(c.suit.value) for c in cards]
 
