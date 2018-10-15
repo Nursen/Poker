@@ -3,11 +3,13 @@ problem, I decided to forego my usual language of C# in favor of python, with I
 think is more heavily used at the Broad. I modeled the cards myself, and tried
 to make a package that could easily be used to implement other card games. I
 include a Deck object in the package, which I used in some manual testing
-throughout development, and also in the Simulation file, which can be run with
-the output piped to a file if you would like to see how my code performs on a
-large number of hands. The PokerHandSimulation file is included, feel free to
-change the configuration values to see the behavior of the code in a
-pseudo-random set of generated poker hands.
+throughout development, and also in the Simulation file. The PokerHandSimulation
+file is included, feel free to run the functions with or without additional
+parameters to generate Poker hands or run tournaments. To generate a simulated
+tournament as a text file, run
+
+python -c "import PokerHandSimulation; PokerHandSimulation.runPokerTournaments()" >> sampleResults.txt
+
 
 To test the functions, you will need Python 3.6.
 Run a python shell in the directory containing the unzipped files.
