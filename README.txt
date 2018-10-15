@@ -58,7 +58,7 @@ cards. For example, the input ["3H", "7S", "3S", "QD", "AH", "3D", "4S"] should
 return [3H, 3S, 3D, AH, QD], which is a 3-of-a-kind with 3s, ace and queen kickers.
 
 SOLUTION EXAMPLE:
-imput = ["JH", "4C", "4S", "JC", "9H", "10C", "QS", "AD"]
+input = ["JH", "4C", "4S", "JC", "9H", "10C", "QS", "AD"]
 whichCardsShouldIChoose(input)
 
 The solution is returned as a string array in the same format as the input.
