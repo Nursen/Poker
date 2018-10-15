@@ -10,8 +10,8 @@ change the configuration values to see the behavior of the code in a
 pseudo-random set of generated poker hands.
 
 To test the functions, you will need Python 3.6.
-run a python shell in the directory containing the unzipped files.
-import all functions from BroadPokerTests, then follow the solution instructions
+Run a python shell in the directory containing the unzipped files.
+Import all functions from BroadPokerTests, then follow the solution instructions
 for the problem you would like to test
 
 For ease of testing, the method createSampleHands can be used to randomly generate a list
@@ -25,7 +25,7 @@ input ["JH", "4C", "4S", "JC","9H"] would have the value of two pair: jacks and
 4s with a 9 kicker. You may choose your own representation for the output.
 
 SOLUTION EXAMPLE:
-imput = ["JH", "4C", "4S", "JC", "9H"]
+input = ["JH", "4C", "4S", "JC", "9H"]
 whatsMyHand(input)
 
 The solution will be printed on your screen, with the description of the hand,
